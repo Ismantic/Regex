@@ -30,7 +30,7 @@
 - **逐字搜索**的匹配，处理锚点语法（^$）并在字符串中定位匹配位置
 
 
-### 字符层面匹配
+**字符层面匹配**
 ```cpp
 bool MatchCharacter(const std::string& pattern, size_t pos, char c) {
     if (c == '\0') return false;
@@ -63,7 +63,7 @@ bool MatchCharacter(const std::string& pattern, size_t pos, char c) {
   - 小写字母（如`\d` 代表数字）表示匹配该字符
   - 大小字母（如`\D` 代表非数字）表示匹配该类字符的**取反**
 
-### 模式层面匹配
+**模式层面匹配**
 ```cpp
 bool MatchPattern(const std::string& re, const std::string& str, uint32_t& n) {
     if (re.empty()) return true;
@@ -101,7 +101,7 @@ bool MatchPattern(const std::string& re, const std::string& str, uint32_t& n) {
 ```
 该函数实现了三种核心的模式层面匹配：
 
-#### 1. 量词 `*` （零次或多次匹配）
+**1. 量词 `*` （零次或多次匹配）**
 `*` 量词的实现是最复杂的，采用**贪婪匹配**策略（贪婪说的是匹配next）：
 
 ```cpp
@@ -139,7 +139,7 @@ if (!next.empty() && next[0] == '*') {
 - 当前实现：.* 从0开始尝试，逐步增加，直到找到合适的分割点
 
 
-#### 2. 量词 `?`（零次或一次匹配）
+**2. 量词 `?`（零次或一次匹配）**
 
 `?` 量词相对简单，但也需要处理两种情况：
 
@@ -171,7 +171,7 @@ if (!next.empty() && next[0] == '?') {
 - 尝试匹配 0 个 `a`：直接用 `"b"` 匹配模式 `b` → 成功！
 
 
-#### 3. 顺序匹配（精确一次匹配）
+**3. 顺序匹配（精确一次匹配）**
 
 当模式中没有量词时，执行顺序匹配：
 
@@ -201,7 +201,7 @@ return !str.empty() &&           // 确保字符串非空
 - 递归匹配 `bc` vs `"xc"`：
   - 匹配 `b`：`str[0]='x'` 不匹配 `re[0]='b'` → 失败
 
-### 逐字搜索匹配
+**逐字搜索匹配**
 ```cpp
 int32_t MatchRegex(const std::string re, const std::string& str, uint32_t& n) {
     if (re[0] == '^') {
@@ -220,7 +220,7 @@ int32_t MatchRegex(const std::string re, const std::string& str, uint32_t& n) {
 
 该函数是整个正则引擎的入口，负责处理锚点和搜索逻辑：
 
-#### 锚点处理
+**锚点处理**
 
 **开头锚点 '^'**
 ```cpp
@@ -244,7 +244,7 @@ if (re[0] == '$' && re.length() == 1) return str.empty();
 - 只有当 `$` 是整个模式时才作为结尾锚点
 - 要求剩余字符串为空才匹配成功
 
-#### 逐字搜索
+**逐字搜索**
 
 ```cpp
 for (size_t pos = 0; pos <= str.length(); ++pos) {
@@ -267,7 +267,7 @@ return -1;
 - pos=2：`MatchPattern("abc", "zabc")` → 失败
 - pos=3：`MatchPattern("abc", "abc")` → 成功！返回 3
 
-### 性能分析
+**性能分析**
 
 Wapiti项目中用这个Regex实现来做特征抽取，场景比较固定，性能要求不高，
 不过要是实现一个通用的正则引起，这个方案就不行了。除去代码中涉及到递归函数，
@@ -275,7 +275,7 @@ Wapiti项目中用这个Regex实现来做特征抽取，场景比较固定，性
 
 当前方案的时间复杂度为 **O(n^m)**，其中 m 为量词个数。
 
-#### 经典案例分析
+**经典案例分析**
 
 考虑模式 `a*a*b` 匹配字符串 `"aaaaac"`（最后是 c 不是 b，必然失败）：
 
@@ -294,7 +294,7 @@ do {
 } while (pos <= str.length() && MatchCharacter(re, 0, str[pos-1]));
 ```
 
-#### 数学分析
+**数学分析**
 
 对于 n 个 `a` 字符，两个 `a*` 的分配方案数：
 - 第一个 `a*` 匹配 i 个，第二个匹配 (n-i) 个
@@ -311,7 +311,7 @@ do {
 
 **总计**：5+4+3+2+1 = 15 = O(n²)
 
-#### 一般化公式
+**一般化公式**
 
 对于 m 个量词和 n 个字符的情况，复杂度为：
 - **2 个量词**：O(n²)
@@ -329,7 +329,7 @@ do {
 
 这套下来除了能把正则表达式的匹配问题转换为有限自动机的状态转换问题，实现线性时间复杂度的字符串匹配，还能让扩展正则表达式的功能也更容易些，这会是一种教科书级别的实现方案。
 
-### BNF 语法
+**BNF 语法**
 
 **BNF** (Backus-Naur Form) 是一种用于描述上下文无关文法的标准表示法，其使用以下符号：
 
@@ -338,7 +338,7 @@ do {
 - `<>` 包围非终结符
 - 不在 `<>` 中的符合是终结符（具体的字符或Token）
 
-#### 正则表达式的BNF定义
+**正则表达式的BNF定义**
 
 以下实现的正则表达式语法支持以下操作：
 
@@ -351,9 +351,9 @@ do {
 <Literal>    ::= UTF-8字符（除了特殊字符）
 ```
 
-#### 语法详解
+**语法详解**
 
-##### Pattern层（模式层）
+**Pattern层（模式层）**
 ```BNF
 <Pattern> ::= <Sequence> ('|' <Sequence>)*
 ```
@@ -363,7 +363,7 @@ do {
   - `a|b` → 匹配字符`a`或`b`
   - `hello|world|regex` → 匹配三个单词中的任意一个
 
-##### Sequence层（序列层）
+**Sequence层（序列层）**
 ```BNF
 <Sequence> ::= <Element>*
 ```
@@ -374,7 +374,7 @@ do {
   - `a*b+` → 量词修饰的原子序列
   - 空序列 → 匹配空字符串
 
-##### Element层（元素层）
+**Element层（元素层）**
 ```BNF
 <Element> ::= <Atom> <Quantifier>?
 ```
@@ -386,7 +386,7 @@ do {
   - `(ab)+` → 组合原子后跟加号量词
 
 
-##### Atom层（原子层）
+**Atom层（原子层）**
 ```BNF
 <Atom> ::= <Literal> | '.' | '(' <Pattern> ')'
 ```
@@ -398,7 +398,7 @@ do {
   - `(a|b)` → 括号分组，包含子模式
 
 
-##### Quantifier层（量词层）
+**Quantifier层（量词层）**
 ```BNF
 <Quantifier> ::= '*' | '+' | '?'
 ```
@@ -409,9 +409,9 @@ do {
   - `+` → 一次或多次  
   - `?` → 零次或一次
 
-#### 语法特性
+**语法特性**
 
-##### 优先级和结合性
+**优先级和结合性**
 
 该语法具有以下优先级（从高到低）：
 
@@ -425,7 +425,7 @@ do {
 - `a|bc` → `a|(bc)` 而不是 `(a|b)c`
 - `a|b|c` → `((a|b)|c)` 左结合
 
-#### 递归结构
+**递归结构**
 
 语法中存在递归定义：
 - `<Pattern>` 在 `<Atom>` 的括号表达式中出现
@@ -449,7 +449,7 @@ do {
         └── <Quantifier>: '+'
 ```
 
-### 递归下降解析器
+**递归下降解析器**
 
 **递归下降解析**是一种自顶向下的语法分析技术，其核心思想是：
 
@@ -458,7 +458,7 @@ do {
 3. **递归处理体现语法的递归结构**
 4. **回溯处理选择和可选元素**
 
-#### 实现详解
+**实现详解**
 
 `RegexParser`类包含以下核心组件：
 
@@ -482,7 +482,7 @@ private:
 };
 ```
 
-##### ParsePattern函数 - 处理选择操作
+**ParsePattern函数 - 处理选择操作**
 
 ```Cpp
 std::unique_ptr<Ast> ParsePattern() {
@@ -527,7 +527,7 @@ std::unique_ptr<Ast> ParsePattern() {
 ```
 
 
-##### ParseSequence函数 - 处理连接操作
+**ParseSequence函数 - 处理连接操作**
 
 ```Cpp
 std::unique_ptr<Ast> ParseSequence() {
@@ -566,7 +566,7 @@ std::unique_ptr<Ast> ParseSequence() {
 结果: SequenceAst包含三个LiteralAst节点
 ```
 
-##### ParseElement函数 - 处理量词
+**ParseElement函数 - 处理量词**
 
 ```Cpp
 std::unique_ptr<Ast> ParseElement() {
@@ -623,7 +623,7 @@ std::unique_ptr<Ast> ParseElement() {
 结果: StarAst(LiteralAst('a'))
 ```
 
-##### ParseAtom函数 - 处理基本单元
+**ParseAtom函数 - 处理基本单元**
 
 ```Cpp
 std::unique_ptr<Ast> ParseAtom() {
@@ -687,7 +687,7 @@ std::unique_ptr<Ast> ParseAtom() {
 3. **错误检测**：对不匹配的括号和无效字符进行错误处理
 4. **特殊字符过滤**：确保特殊语法字符不被当作字面量处理
 
-#### 完整示例
+**完整示例**
 
 通过一个完整的例子来观察解析过程：
 
@@ -727,7 +727,7 @@ SequenceAst
 └── LiteralAst('c')
 ```
 
-### 抽象语法树
+**抽象语法树**
 
 **抽象语法树(Abstract Syntax Tree, AST)**是源代码语法结构的树状表示，它具有以下特点：
 
@@ -736,7 +736,7 @@ SequenceAst
 3. **类型化**：每个节点都有明确的类型和语义
 4. **可遍历**：支持各种遍历和转化操作
 
-#### AST节点类型
+**AST节点类型**
 
 正则表达式AST包含以下节点类型：
 
@@ -753,7 +753,7 @@ enum class AstType {
 };
 ```
 
-#### 基础类
+**基础类**
 
 ```Cpp
 class Ast {
@@ -764,7 +764,7 @@ public:
 };
 ```
 
-#### 叶子节点类
+**叶子节点类**
 
 **空节点** - 表示空字符串：
 ```Cpp
@@ -799,7 +799,7 @@ public:
 };
 ```
 
-#### 复合节点类
+**复合节点类**
 
 **序列节点** - 表示元素连接：
 ```Cpp
@@ -859,11 +859,11 @@ public:
 // 加号量词 (1或多次) 和 问号量词 (0或1次) 结构类似...
 ```
 
-### 访问者模式
+**访问者模式**
 
 **访问者模式(Visitor Pattern)**是一种行为设计模式，它允许在不修改现有类结构的情况下，对类层次结构添加新的操作。
 
-#### 核心组件
+**核心组件**
 
 **1. 访问者接口**：
 ```Cpp
@@ -899,7 +899,7 @@ void Accept(AstVisitor* v) const override {
 3. **类型安全**：编译时确定调用哪个Visit方法
 4. **集中化**：相关操作集中在一个访问者类中
 
-#### Printer
+**Printer**
 
 通过`RegexPrinter`类来深入理解访问者模式的应用：
 
@@ -968,7 +968,7 @@ public:
 };
 ```
 
-##### 示例
+**示例**
 
 对于正则表达式`"(a|b)*c"`，打印器会产生以下输出：
 
@@ -987,7 +987,7 @@ Sequence
 3. 星号修饰的是一个选择（a或b）
 4. 第二个元素是字面量字符c
 
-#### 执行流程
+**执行流程**
 
 跟踪`"a*"`的打印过程：
 
@@ -1035,11 +1035,11 @@ Star
  Literal('a', U+61)
 ```
 
-#### 其他应用
+**其他应用**
 
 访问者模式为AST提供了强大的扩展性，可以轻松实现各种操作：
 
-##### AST验证器
+**AST验证器**
 ```Cpp
 class AstValidator : public AstVisitor {
 private:
@@ -1075,7 +1075,7 @@ public:
 };
 ```
 
-##### AST大小计算器
+**AST大小计算器**
 ```Cpp
 class AstSizeCalculator : public AstVisitor {
 private:
@@ -1102,7 +1102,7 @@ public:
 };
 ```
 
-### NFA
+**NFA**
 
 **非确定有限自动机**(Nondeterministic Finite Automation, NFA)是一种理论计算模型，具有以下特征：
 
@@ -1119,7 +1119,7 @@ public:
 
 下面通过代码详解。
 
-#### 状态设计
+**状态设计**
 
 NFA状态类包含以下组件：
 
@@ -1150,7 +1150,7 @@ public:
 };
 ```
 
-##### 设计要点
+**设计要点**
 
 1. **状态编号**：每个状态有唯一的编号，便于调试和可视化
 2. **接受标记**：`end`字段标识接受状态
@@ -1158,7 +1158,7 @@ public:
 4. **ε转换列表**：专门处理不消耗字符的转换
 5. **通配符处理**：使用特殊值`0xFFFFFFFF`表示通配符转换
 
-##### 片段结构
+**片段结构**
 
 ```Cpp
 struct NFA {
@@ -1171,11 +1171,11 @@ struct NFA {
 
 每个NFA片段都有明确的入口和出口，这种设计便于组合和连接。
 
-#### Thompson构造法
+**Thompson构造法**
 
 Thompson构造法将正则表达式AST转换为NFA。这种方法为每种正则表达式操作定义了标准的NFA模板。
 
-##### 基本构造模板
+**基本构造模板**
 
 **1. 空表达式 (ε)**
 
@@ -1226,7 +1226,7 @@ void Visit(const DotAst* node) override {
 }
 ```
 
-##### 复合构造模板
+**复合构造模板**
 
 **4. 序列连接 (AB)**
 
@@ -1416,12 +1416,12 @@ void Visit(const OptionalAst* node) override {
 }
 ```
 
-#### NFA构建示例
+**NFA构建示例**
 
 
 通过构建`"a*b"`的NFA来演示完整过程：
 
-##### 步骤1：解析AST
+**步骤1：解析AST**
 ```
 SequenceAst
 ├── StarAst
@@ -1429,7 +1429,7 @@ SequenceAst
 └── LiteralAst('b')
 ```
 
-##### 步骤2：构建子NFA
+**步骤2：构建子NFA**
 
 **构建LiteralAst('a')**：
 ```
@@ -1449,7 +1449,7 @@ SequenceAst
 状态4 --'b'--> 状态5(接受)
 ```
 
-##### 步骤3：连接序列
+**步骤3：连接序列**
 
 将`a*`和`b`连接：
 ```
@@ -1470,7 +1470,7 @@ SequenceAst
 ```
 
 
-#### PrintNFA
+**PrintNFA**
 
 该实现包含了详细的NFA结构打印功能：
 
@@ -1540,7 +1540,7 @@ State 2:
 State 3 (END):
 ```
 
-### DFA
+**DFA**
 
 **确定有限自动机**(Deterministic Finite Automation, DFA) 是NFA的确定性版本，具有以下特征：
 
@@ -1559,7 +1559,7 @@ State 3 (END):
 | 构造复杂度 | 简单，状态数较少 | 复杂，状态数可能指数增长 |
 | 匹配效率 | O(nm)，需要跟踪多个状态 | O(n)，直接状态转换 |
 
-#### 状态设计
+**状态设计**
 
 ```Cpp
 class DFAState {
@@ -1579,11 +1579,11 @@ public:
 - **无ε转换**：DFA不需要ε转换列表
 - **确定性**：每个输入字符最多对应一个目标状态
 
-#### 子集构造法
+**子集构造法**
 
 子集构造法将NFA转换为等价的DFA。基本思想是：DFA的每个状态对应NFA状态的一个子集。
 
-##### 核心算法组件
+**核心算法组件**
 
 **1. ε闭包计算(Epsilon Closure)**
 
@@ -1671,7 +1671,7 @@ bool ContainsEndState(const std::set<NFAState*>& states) {
 
 
 
-##### 主构造算法
+**主构造算法**
 
 ```Cpp
 DFAState* Build(const NFA& nfa) {
@@ -1734,12 +1734,12 @@ DFAState* Build(const NFA& nfa) {
 }
 ```
 
-#### 构建示例
+**构建示例**
 
 
 通过`"a*"`的例子来演示DFA构建过程：
 
-##### 输入NFA
+**输入NFA**
 
 ```
 State 0 (START):
@@ -1756,7 +1756,7 @@ State 2:
 State 3 (END):
 ```
 
-##### 构建步骤
+**构建步骤**
 
 **步骤1：初始状态集合**
 ```
@@ -1782,7 +1782,7 @@ DFA状态: State 0 (接受状态，因为包含NFA状态3)
 添加转换: State 1 --'a'--> State 1 (自循环)
 ```
 
-##### 最终DFA
+**最终DFA**
 
 ```
 === DFA Struct ===
@@ -1798,11 +1798,11 @@ State 1 (END):
 - **State 1**：匹配了至少一个'a'后的状态，也是接受状态
 - **自循环**：State 1的自循环表示可以匹配任意多个'a'
 
-#### 示例：`(a|b)*c`
+**示例：`(a|b)*c`**
 
 考虑一个更复杂的例子：
 
-##### NFA结构（简化表示）
+**NFA结构（简化表示）**
 
 ```
 Start --ε--> Choice --ε--> APath --'a'--> AEnd --ε--> Loop --ε--> AfterStar --'c'--> End
@@ -1813,7 +1813,7 @@ Start --ε--> Choice --ε--> APath --'a'--> AEnd --ε--> Loop --ε--> AfterStar 
                                                        --ε--> End
 ```
 
-##### 构建过程
+**构建过程**
 
 **初始状态**：
 ```
@@ -1844,7 +1844,7 @@ State 2 (END):
 
 这个DFA清晰地表达了`(a|b)*c`的语义：匹配任意数量的'a'或'b'，最后以'c'结束。
 
-#### 匹配算法
+**匹配算法**
 
 
 DFA的匹配算法非常简单高效：
@@ -1882,9 +1882,9 @@ bool Match(DFAState* start, const std::string& text) {
 3. **UTF-8支持**：正确处理多字节字符
 4. **简单直观**：状态转换逻辑清晰
 
-### 引擎实现
+**引擎实现**
 
-#### Regex类
+**Regex类**
 
 现在把全部组件整合到一个`Regex`类中：
 
@@ -1929,7 +1929,7 @@ public:
 };
 ```
 
-#### Pipeline
+**Pipeline**
 
 该正则表达式引擎使用了标准的编译器流水线：
 
@@ -1958,7 +1958,7 @@ public:
       匹配结果
 ```
 
-#### 测试函数
+**测试函数**
 
 ```Cpp
 void test_regex(const std::string& pattern, const std::vector<std::string>& cases) {
@@ -1980,9 +1980,9 @@ void test_regex(const std::string& pattern, const std::vector<std::string>& case
 }
 ```
 
-#### 运行示例
+**运行示例**
 
-##### 基础字符
+**基础字符**
 
 ```Cpp
 test_regex("a", {"a", "b", ""});
@@ -2012,7 +2012,7 @@ State 1 (END):
 "" -> Not Match
 ```
 
-##### Unicode字符
+**Unicode字符**
 
 ```Cpp
 test_regex("你好", {"你好", "你", "好", "再见"});
@@ -2032,7 +2032,7 @@ Sequence
 "再见" -> Not Match
 ```
 
-##### 复杂模式
+**复杂模式**
 
 ```Cpp
 test_regex("(你|好)*", {"", "你", "好", "你好", "好你", "你你好好"});
@@ -2055,26 +2055,26 @@ Star
 "你你好好" -> Match
 ```
 
-#### 性能分析
+**性能分析**
 
-##### 编译时复杂度
+**编译时复杂度**
 
 1. **解析**：O(m)，其中m是模式长度
 2. **NFA构建**：O(m)，每个AST节点处理一次
 3. **DFA构建**：O(2^n)，最坏情况下指数级状态数
 
-##### 匹配时复杂度
+**匹配时复杂度**
 
 1. **NFA匹配**：O(mn)，需要跟踪多个状态
 2. **DFA匹配**：O(n)，确定性状态转换
 
-##### 空间复杂度
+**空间复杂度**
 
 1. **AST**：O(m)，与模式长度成正比
 2. **NFA**：O(m)，Thompson构造法保证线性状态数
 3. **DFA**：O(2^m)，最坏情况下指数级
 
-### 扩展示例
+**扩展示例**
 
 通过锚点支持来说明该怎么继续增加引擎的能力，添加行首(^)和行尾($)锚点：
 
