@@ -2,11 +2,11 @@
 
 从零实现正则表达式引擎，并按照实现演进保留三个独立的 C++17 程序：
 
-| 源码 | 内容 | 对应文章 |
-|------|------|----------|
-| `src/regex-0.cc` | 递归回溯 Matcher | [正则表达式引擎：基础篇](regex-engine-1.md) |
-| `src/regex-1.cc` | Parser → AST → NFA → DFA | [正则表达式引擎：基础篇](regex-engine-1.md) |
-| `src/regex-2.cc` | 字符集合、谓词边、等价类、Lazy DFA 与文本分段 | [正则表达式引擎：高级篇](regex-engine-2.md) |
+| 源码 | 内容 |
+|------|------|
+| `src/regex-0.cc` | 递归回溯 Matcher |
+| `src/regex-1.cc` | Parser → AST → NFA → DFA |
+| `src/regex-2.cc` | 字符集合、谓词边、等价类、Lazy DFA 与文本分段 |
 
 `regex-0` 用简短代码展示直接匹配；`regex-1` 展示经典的正则编译流水线；`regex-2` 面向 Tokenizer 预分词 Pattern，将单字符转移推广为字符集合，并通过 `CharPred`、字符等价类和 Lazy DFA 支持 Unicode 文本分段。
 
