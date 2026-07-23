@@ -855,11 +855,18 @@ public:
             }
 
             auto it = current->transitions.find(p);
-            if (it == current->transitions.end()) {
+            if (it != current->transitions.end()) {
+                current = it->second;
+            } else if (p != '\n' && p != '\r') {
+                auto dot = current->transitions.find(NFAState::DOT_CHAR);
+                if (dot == current->transitions.end()) {
+                    return false;
+                }
+                current = dot->second;
+            } else {
                 return false;
             }
 
-            current = it->second;
             pos += bytes;
         }
 
@@ -974,6 +981,23 @@ void test_regex(const std::string& pattern, const std::vector<std::string>& case
         std::cout << "Error: " << e.what() << "\n\n";
     }
 }
+
+void check_regex(
+        const std::string& pattern,
+        const std::vector<std::pair<std::string, bool>>& cases) {
+    Regex regex(pattern);
+
+    std::cout << "\n=== Check ===\n";
+    for (const auto& [text, expected] : cases) {
+        bool actual = regex.Match(text);
+        std::cout << "\"" << text << "\" -> "
+                  << (actual ? "Match" : "Not Match");
+        if (actual != expected) {
+            std::cout << " FAIL";
+        }
+        std::cout << "\n";
+    }
+}
 } // namespace regex
 
 int main() {
@@ -1006,6 +1030,28 @@ int main() {
     
     // Emoji
     test_regex("🌟", {"🌟", "⭐", "星"});    
+
+    regex::check_regex(".", {
+        {"a", true},
+        {"你", true},
+        {"\n", false},
+        {"\r", false},
+        {"", false},
+    });
+
+    regex::check_regex("a.", {
+        {"ab", true},
+        {"a你", true},
+        {"a\n", false},
+        {"a", false},
+    });
+
+    regex::check_regex(".a|ab", {
+        {"ba", true},
+        {"ab", true},
+        {"aa", true},
+        {"a\n", false},
+    });
 
     return 0;
 }

@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository contains three standalone C++17 regex-engine implementations. `src/regex-0.cc` is the recursive matcher, `src/regex-1.cc` implements the Parser-to-AST-to-NFA-to-DFA pipeline, and `src/regex-2.cc` adds character predicates, equivalence classes, Lazy DFA construction, and text segmentation. Conceptual documentation lives in `regex-engine-1.md` and `regex-engine-2.md`. Keep generated files under `build/`; do not commit build artifacts.
+This repository contains three standalone C++17 regex-engine implementations. `src/regex-0.cc` is the recursive matcher, `src/regex-1.cc` implements the Parser-to-AST-to-NFA-to-DFA pipeline, and `src/regex-2.cc` adds character predicates, equivalence classes, Lazy DFA construction, and text segmentation. `README.md` links to the canonical conceptual chapters in the Text book; do not duplicate those chapters here. Keep generated files under `build/`; do not commit build artifacts.
 
 ## Build, Test, and Development Commands
 
@@ -28,4 +28,4 @@ There is no external test framework or coverage threshold. Tests currently live 
 
 ## Commit & Pull Request Guidelines
 
-Recent history uses short, descriptive subjects such as `Add regex engine source, docs, CMake build, and LICENSE`. Write an imperative summary, keep each commit scoped to one logical change, and explain non-obvious algorithm decisions in the body. Pull requests should describe behavioral changes, list commands run, and include representative before/after output for matching or performance changes. Link relevant issues and update the Markdown documentation when supported syntax or architecture changes.
+Recent history uses short, descriptive subjects such as `Add regex engine source, docs, CMake build, and LICENSE`. Write an imperative summary, keep each commit scoped to one logical change, and explain non-obvious algorithm decisions in the body. Pull requests should describe behavioral changes, list commands run, and include representative before/after output for matching or performance changes. Link relevant issues and update `README.md`; propose conceptual tutorial changes in the IsBook repository.
