@@ -1,8 +1,8 @@
-// new_regex.cc — Extended regex engine for GPT-4 style pre-tokenization.
-// Based on regex.cc architecture: Parser → AST → NFA (Thompson) → DFA → Match
+// regex-2.cc — Extended regex engine for tokenizer pre-segmentation.
+// Based on regex-1.cc architecture: Parser → AST → NFA (Thompson) → DFA → Match
 // Extended with: character classes, \p{A}/\p{H}/\p{N}, \s/\r/\n, and Segment
 //
-// Unicode properties: \p{A}=alpha, \p{H}=Han, \p{N}=digit, \p{L}=letter
+// Unicode properties: \p{A}=alpha, \p{H}=Han, \p{N}=digit
 
 #include <chrono>
 #include <fstream>
@@ -751,7 +751,7 @@ void test_match(const std::string& pattern, const std::vector<std::pair<std::str
 }
 
 int main(int argc, char** argv) {
-    // --- Benchmark mode: ./new_regex <file> [max_lines] ---
+    // --- Benchmark mode: ./regex-2 <file> [max_lines] ---
     if (argc >= 2) {
         int max_lines = argc > 2 ? std::atoi(argv[2]) : 0;
         std::vector<std::string> lines;

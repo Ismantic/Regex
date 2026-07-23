@@ -1,52 +1,32 @@
 # Regex
 
-从零实现正则表达式引擎，包含两个实现：
+从零实现正则表达式引擎，并按照实现演进保留三个独立的 C++17 程序：
 
-1. **NaiveRegex** — 基于递归回溯的简单匹配器，支持 `.`、`*`、`?`、`\d` 等基础语法
-2. **Regex** — 完整的正则引擎，经典编译流程：
-   - 递归下降解析器 → AST
-   - Thompson 构造：AST → NFA
-   - 子集构造：NFA → DFA
-   - DFA 匹配
+| 源码 | 内容 | 对应文章 |
+|------|------|----------|
+| `src/regex-0.cc` | 递归回溯 Matcher | [正则表达式引擎：基础篇](regex-engine-1.md) |
+| `src/regex-1.cc` | Parser → AST → NFA → DFA | [正则表达式引擎：基础篇](regex-engine-1.md) |
+| `src/regex-2.cc` | 字符集合、谓词边、等价类、Lazy DFA 与文本分段 | [正则表达式引擎：高级篇](regex-engine-2.md) |
 
-支持 UTF-8，可处理中文和 Emoji。
+`regex-0` 用简短代码展示直接匹配；`regex-1` 展示经典的正则编译流水线；`regex-2` 面向 Tokenizer 预分词 Pattern，将单字符转移推广为字符集合，并通过 `CharPred`、字符等价类和 Lazy DFA 支持 Unicode 文本分段。
 
-详细的实现原理和代码讲解见 [Regex.md](Regex.md)。
-
-## 构建
+## 构建与运行
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
+
+./build/regex-0
+./build/regex-1
+./build/regex-2
 ```
 
-## 运行
+三个程序均包含内置示例和检查。`regex-1`、`regex-2` 以 Unicode codepoint 处理 UTF-8 输入。
 
-完整正则引擎（含构建过程输出和测试）：
+## 文档
 
-```bash
-./build/regex
-```
-
-简单匹配器测试：
-
-```bash
-./build/naive_regex
-```
-
-## 支持的语法
-
-| 语法 | 说明 | 示例 |
-|------|------|------|
-| 字面量 | 匹配字符本身 | `abc` |
-| `.` | 匹配任意字符（换行除外） | `a.c` |
-| `\|` | 或 | `a\|b` |
-| `*` | 零次或多次 | `a*` |
-| `+` | 一次或多次 | `a+` |
-| `?` | 零次或一次 | `a?` |
-| `()` | 分组 | `(ab)*` |
-
-NaiveRegex 额外支持：`\d`（数字）、`\a`（字母）、`\s`（空白）、`^`（行首）、`$`（行尾）等。
+- [正则表达式引擎：基础篇](regex-engine-1.md)：从递归 Matcher 讲到 Parser、AST、Thompson NFA、子集构造和 DFA 匹配。
+- [正则表达式引擎：高级篇](regex-engine-2.md)：围绕目标预分词 Pattern，讲解字符集合、谓词化 NFA、字符等价类、Lazy DFA 和 `Segment`。
 
 ## License
 

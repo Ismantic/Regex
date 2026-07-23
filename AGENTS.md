@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository contains several standalone C++17 regex-engine implementations. `src/regex.cc` implements the parser-to-AST-to-NFA-to-DFA pipeline, while `src/naive_regex.cc` contains the smaller recursive matcher. `src/new_regex.cc` and `src/tokenizer_regex.cc` explore extended syntax and tokenization but are not currently registered as CMake targets. Conceptual documentation lives in `README.md`, `Regex.md`, and `NewRegex.md`. Keep generated files under `build/`; do not commit build artifacts.
+This repository contains three standalone C++17 regex-engine implementations. `src/regex-0.cc` is the recursive matcher, `src/regex-1.cc` implements the Parser-to-AST-to-NFA-to-DFA pipeline, and `src/regex-2.cc` adds character predicates, equivalence classes, Lazy DFA construction, and text segmentation. Conceptual documentation lives in `regex-engine-1.md` and `regex-engine-2.md`. Keep generated files under `build/`; do not commit build artifacts.
 
 ## Build, Test, and Development Commands
 
@@ -11,8 +11,9 @@ Configure and build the supported executables from the repository root:
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-./build/regex
-./build/naive_regex
+./build/regex-0
+./build/regex-1
+./build/regex-2
 ```
 
 The executables run their built-in examples and checks. For stricter compiler diagnostics during development, configure a separate tree with `cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic"`.
@@ -23,7 +24,7 @@ Use C++17 and follow the style already present in the file being changed. Indent
 
 ## Testing Guidelines
 
-There is no external test framework or coverage threshold. Tests currently live in each executable's `main()` and print mismatches with `FAIL`. Add focused cases near related examples, covering successful matches, rejection, empty input, quantifier boundaries, and UTF-8 text where applicable. Run both CMake-built executables and inspect their complete output before submitting. If adding a new standalone engine, register it in `CMakeLists.txt` so it can be built consistently.
+There is no external test framework or coverage threshold. Tests currently live in each executable's `main()` and print mismatches with `FAIL`. Add focused cases near related examples, covering successful matches, rejection, empty input, quantifier boundaries, and UTF-8 text where applicable. Run all three CMake-built executables and inspect their complete output before submitting. If adding a new standalone engine, register it in `CMakeLists.txt` so it can be built consistently.
 
 ## Commit & Pull Request Guidelines
 
