@@ -1,6 +1,6 @@
 // new_regex.cc — Extended regex engine for GPT-4 style pre-tokenization.
 // Based on regex.cc architecture: Parser → AST → NFA (Thompson) → DFA → Match
-// Extended with: [char class], \p{unicode}, \s \r \n, {m,n}, (?:), FindAll
+// Extended with: character classes, \p{A}/\p{H}/\p{N}, \s/\r/\n, and Segment
 //
 // Unicode properties: \p{A}=alpha, \p{H}=Han, \p{N}=digit, \p{L}=letter
 
@@ -86,7 +86,6 @@ static bool IsWordChar(uint32_t c) {
     return false;
 }
 static bool IsAlpha(uint32_t c) { return IsWordChar(c)&&!IsDigit(c)&&!IsHan(c); }
-static bool IsLetter(uint32_t c) { return IsWordChar(c)&&!IsDigit(c); }
 static bool IsWhitespace(uint32_t c) {
     if (c>=0x09&&c<=0x0D) return true;
     if (c==0x20||c==0x85||c==0xA0) return true;
@@ -102,7 +101,7 @@ static bool IsWhitespace(uint32_t c) {
 using CharPred = std::function<bool(uint32_t)>;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AST — same hierarchy as regex.cc, with CharClassAst and RepeatAst added
+// AST — same hierarchy as regex.cc, with CharClassAst added
 // ═══════════════════════════════════════════════════════════════════════════
 
 class EmptyAst;
@@ -114,7 +113,6 @@ class AlternativeAst;
 class StarAst;
 class PlusAst;
 class OptionalAst;
-class RepeatAst;          // NEW
 
 class AstVisitor {
 public:
@@ -128,11 +126,10 @@ public:
     virtual void Visit(const StarAst*) = 0;
     virtual void Visit(const PlusAst*) = 0;
     virtual void Visit(const OptionalAst*) = 0;
-    virtual void Visit(const RepeatAst*) = 0;        // NEW
 };
 
 enum class AstType {
-    Empty, Literal, Dot, CharClass, Sequence, Alternative, Star, Plus, Optional, Repeat
+    Empty, Literal, Dot, CharClass, Sequence, Alternative, Star, Plus, Optional
 };
 
 class Ast {
@@ -140,7 +137,6 @@ public:
     virtual ~Ast() = default;
     virtual AstType GetType() const = 0;
     virtual void Accept(AstVisitor* v) const = 0;
-    virtual std::unique_ptr<Ast> Clone() const = 0;  // needed for {m,n}
 };
 
 // --- EmptyAst ---
@@ -148,7 +144,6 @@ class EmptyAst : public Ast {
 public:
     AstType GetType() const override { return AstType::Empty; }
     void Accept(AstVisitor* v) const override { v->Visit(this); }
-    std::unique_ptr<Ast> Clone() const override { return std::make_unique<EmptyAst>(); }
 };
 
 // --- LiteralAst --- matches a single Unicode codepoint
@@ -159,7 +154,6 @@ public:
     AstType GetType() const override { return AstType::Literal; }
     uint32_t GetPoint() const { return point_; }
     void Accept(AstVisitor* v) const override { v->Visit(this); }
-    std::unique_ptr<Ast> Clone() const override { return std::make_unique<LiteralAst>(point_); }
 };
 
 // --- DotAst --- matches any char except \r \n
@@ -167,7 +161,6 @@ class DotAst : public Ast {
 public:
     AstType GetType() const override { return AstType::Dot; }
     void Accept(AstVisitor* v) const override { v->Visit(this); }
-    std::unique_ptr<Ast> Clone() const override { return std::make_unique<DotAst>(); }
 };
 
 // --- CharClassAst --- NEW: [abc], [^abc], \p{A}, \s, etc.
@@ -180,7 +173,6 @@ public:
     const CharPred& GetPred() const { return pred_; }
     const std::string& GetRepr() const { return repr_; }
     void Accept(AstVisitor* v) const override { v->Visit(this); }
-    std::unique_ptr<Ast> Clone() const override { return std::make_unique<CharClassAst>(pred_, repr_); }
 };
 
 // --- SequenceAst ---
@@ -191,11 +183,6 @@ public:
     const std::vector<std::unique_ptr<Ast>>& GetElements() const { return elements_; }
     AstType GetType() const override { return AstType::Sequence; }
     void Accept(AstVisitor* v) const override { v->Visit(this); }
-    std::unique_ptr<Ast> Clone() const override {
-        auto n = std::make_unique<SequenceAst>();
-        for (auto& e : elements_) n->Add(e->Clone());
-        return n;
-    }
 };
 
 // --- AlternativeAst ---
@@ -206,11 +193,6 @@ public:
     const std::vector<std::unique_ptr<Ast>>& GetBranches() const { return branches_; }
     AstType GetType() const override { return AstType::Alternative; }
     void Accept(AstVisitor* v) const override { v->Visit(this); }
-    std::unique_ptr<Ast> Clone() const override {
-        auto n = std::make_unique<AlternativeAst>();
-        for (auto& b : branches_) n->Add(b->Clone());
-        return n;
-    }
 };
 
 // --- StarAst, PlusAst, OptionalAst ---
@@ -221,7 +203,6 @@ public:
     const Ast* GetElement() const { return element_.get(); }
     AstType GetType() const override { return AstType::Star; }
     void Accept(AstVisitor* v) const override { v->Visit(this); }
-    std::unique_ptr<Ast> Clone() const override { return std::make_unique<StarAst>(element_->Clone()); }
 };
 
 class PlusAst : public Ast {
@@ -231,7 +212,6 @@ public:
     const Ast* GetElement() const { return element_.get(); }
     AstType GetType() const override { return AstType::Plus; }
     void Accept(AstVisitor* v) const override { v->Visit(this); }
-    std::unique_ptr<Ast> Clone() const override { return std::make_unique<PlusAst>(element_->Clone()); }
 };
 
 class OptionalAst : public Ast {
@@ -241,28 +221,10 @@ public:
     const Ast* GetElement() const { return element_.get(); }
     AstType GetType() const override { return AstType::Optional; }
     void Accept(AstVisitor* v) const override { v->Visit(this); }
-    std::unique_ptr<Ast> Clone() const override { return std::make_unique<OptionalAst>(element_->Clone()); }
-};
-
-// --- RepeatAst --- NEW: {min,max}
-class RepeatAst : public Ast {
-    std::unique_ptr<Ast> element_;
-    int min_, max_;  // max_ == -1 means unlimited
-public:
-    RepeatAst(std::unique_ptr<Ast> e, int lo, int hi)
-        : element_(std::move(e)), min_(lo), max_(hi) {}
-    const Ast* GetElement() const { return element_.get(); }
-    int GetMin() const { return min_; }
-    int GetMax() const { return max_; }
-    AstType GetType() const override { return AstType::Repeat; }
-    void Accept(AstVisitor* v) const override { v->Visit(this); }
-    std::unique_ptr<Ast> Clone() const override {
-        return std::make_unique<RepeatAst>(element_->Clone(), min_, max_);
-    }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AST Printer — same as regex.cc, extended with CharClass and Repeat
+// AST Printer — same as regex.cc, extended with CharClass
 // ═══════════════════════════════════════════════════════════════════════════
 
 class AstPrinter : public AstVisitor {
@@ -279,25 +241,22 @@ public:
     void Visit(const CharClassAst* n) override { Pad(); std::cout << "CharClass(" << n->GetRepr() << ")\n"; }
     void Visit(const SequenceAst* n) override {
         Pad(); std::cout << "Sequence\n"; indent_++;
-        for (auto& e : n->GetElements()) e->Accept(this); indent_--;
+        for (auto& e : n->GetElements()) e->Accept(this);
+        indent_--;
     }
     void Visit(const AlternativeAst* n) override {
         Pad(); std::cout << "Alternative\n"; indent_++;
-        for (auto& b : n->GetBranches()) b->Accept(this); indent_--;
+        for (auto& b : n->GetBranches()) b->Accept(this);
+        indent_--;
     }
     void Visit(const StarAst* n) override { Pad(); std::cout << "Star\n"; indent_++; n->GetElement()->Accept(this); indent_--; }
     void Visit(const PlusAst* n) override { Pad(); std::cout << "Plus\n"; indent_++; n->GetElement()->Accept(this); indent_--; }
     void Visit(const OptionalAst* n) override { Pad(); std::cout << "Optional\n"; indent_++; n->GetElement()->Accept(this); indent_--; }
-    void Visit(const RepeatAst* n) override {
-        Pad(); std::cout << "Repeat{" << n->GetMin() << ","
-            << (n->GetMax()==-1 ? "" : std::to_string(n->GetMax())) << "}\n";
-        indent_++; n->GetElement()->Accept(this); indent_--;
-    }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Parser — recursive descent, regex string → AST
-// Extended from regex.cc with: [...], \p{}, \s, \r, \n, {m,n}, (?:...)
+// Extended from regex.cc with: [...], \p{}, \s, \r, \n
 // ═══════════════════════════════════════════════════════════════════════════
 
 class RegexParser {
@@ -315,8 +274,8 @@ class RegexParser {
         return c;
     }
 
-    // Parse \p{Name} or \P{Name}
-    CharPred ParseUnicodeProperty(bool negated) {
+    // Parse \p{Name} for the tokenizer pattern's A, H, and N properties.
+    CharPred ParseUnicodeProperty() {
         if (!Match('{')) throw std::runtime_error("expected {");
         std::string name;
         while (!AtEnd() && pattern_[pos_] != '}') name += pattern_[pos_++];
@@ -324,27 +283,21 @@ class RegexParser {
 
         CharPred pred;
         if (name == "A") pred = IsAlpha;
-        else if (name == "H" || name == "Han") pred = IsHan;
+        else if (name == "H") pred = IsHan;
         else if (name == "N") pred = IsDigit;
-        else if (name == "L") pred = IsLetter;
         else throw std::runtime_error("unknown property: " + name);
-        if (negated) return [pred](uint32_t c) { return !pred(c); };
         return pred;
     }
 
-    // Parse \r, \n, \s, \d, \p{...}, \P{...}, or escaped literal
+    // Parse escapes used by the tokenizer pattern, or an escaped literal.
     std::pair<CharPred, std::string> ParseEscape() {
         if (AtEnd()) throw std::runtime_error("unexpected end after \\");
         char c = pattern_[pos_++];
         switch (c) {
             case 'r': return {[](uint32_t x){return x=='\r';}, "\\r"};
             case 'n': return {[](uint32_t x){return x=='\n';}, "\\n"};
-            case 't': return {[](uint32_t x){return x=='\t';}, "\\t"};
             case 's': return {IsWhitespace, "\\s"};
-            case 'S': return {[](uint32_t x){return !IsWhitespace(x);}, "\\S"};
-            case 'd': return {IsDigit, "\\d"};
-            case 'p': return {ParseUnicodeProperty(false), "\\p{...}"};
-            case 'P': return {ParseUnicodeProperty(true), "\\P{...}"};
+            case 'p': return {ParseUnicodeProperty(), "\\p{...}"};
             default: {
                 uint32_t cc = c;
                 return {[cc](uint32_t x){return x==cc;}, std::string("\\")+(char)c};
@@ -367,14 +320,7 @@ class RegexParser {
             } else {
                 uint32_t c = NextChar();
                 cr = EncodeUTF8(c);
-                if (!AtEnd() && pattern_[pos_] == '-' &&
-                    pos_+1 < pattern_.size() && pattern_[pos_+1] != ']') {
-                    ++pos_; uint32_t c2 = NextChar();
-                    cr += "-" + EncodeUTF8(c2);
-                    cp = [c,c2](uint32_t x) { return x>=c && x<=c2; };
-                } else {
-                    cp = [c](uint32_t x) { return x==c; };
-                }
+                cp = [c](uint32_t x) { return x==c; };
             }
             repr += cr;
             pred = [a=std::move(pred),b=std::move(cp)](uint32_t x) { return a(x)||b(x); };
@@ -389,12 +335,8 @@ class RegexParser {
     std::unique_ptr<Ast> ParseAtom() {
         if (AtEnd()) throw std::runtime_error("unexpected end");
 
-        // Group: (...) or (?:...)
+        // Group: (...)
         if (Match('(')) {
-            if (!AtEnd() && pattern_[pos_] == '?' &&
-                pos_+1 < pattern_.size() && pattern_[pos_+1] == ':') {
-                pos_ += 2;
-            }
             auto ast = ParseAlternation();
             if (!Match(')')) throw std::runtime_error("expected )");
             return ast;
@@ -411,33 +353,14 @@ class RegexParser {
         return std::make_unique<LiteralAst>(NextChar());
     }
 
-    // Parse quantifier: atom followed by *, +, ?, {m,n}
-    // Possessive quantifiers (*+, ++, ?+, {m,n}+) are parsed but treated
-    // as greedy — DFA matching is inherently non-backtracking.
+    // Parse the *, +, and ? quantifiers used by the tokenizer pattern.
     std::unique_ptr<Ast> ParseQuantified() {
         auto atom = ParseAtom();
         if (AtEnd()) return atom;
 
-        if (Match('*')) { Match('+'); return std::make_unique<StarAst>(std::move(atom)); }
-        if (Match('+')) { Match('+'); return std::make_unique<PlusAst>(std::move(atom)); }
-        if (Match('?')) { Match('+'); return std::make_unique<OptionalAst>(std::move(atom)); }
-
-        if (Match('{')) {
-            int lo = 0;
-            while (!AtEnd() && pattern_[pos_]>='0' && pattern_[pos_]<='9')
-                lo = lo*10 + (pattern_[pos_++]-'0');
-            int hi = lo;
-            if (Match(',')) {
-                if (!AtEnd() && pattern_[pos_]>='0' && pattern_[pos_]<='9') {
-                    hi = 0;
-                    while (!AtEnd() && pattern_[pos_]>='0' && pattern_[pos_]<='9')
-                        hi = hi*10 + (pattern_[pos_++]-'0');
-                } else hi = -1;
-            }
-            if (!Match('}')) throw std::runtime_error("expected }");
-            Match('+');
-            return std::make_unique<RepeatAst>(std::move(atom), lo, hi);
-        }
+        if (Match('*')) return std::make_unique<StarAst>(std::move(atom));
+        if (Match('+')) return std::make_unique<PlusAst>(std::move(atom));
+        if (Match('?')) return std::make_unique<OptionalAst>(std::move(atom));
 
         return atom;
     }
@@ -448,8 +371,6 @@ class RegexParser {
             seq->Add(ParseQuantified());
         }
         if (seq->GetElements().empty()) return std::make_unique<EmptyAst>();
-        if (seq->GetElements().size() == 1)
-            return const_cast<std::vector<std::unique_ptr<Ast>>&>(seq->GetElements())[0]->Clone();
         return seq;
     }
 
@@ -604,57 +525,6 @@ public:
         s->epsilons.push_back(e);
         inner.end->epsilons.push_back(e);
         stack_.push({s, e});
-    }
-
-    // NEW: {min,max} — expand to min required + optional/star tail
-    void Visit(const RepeatAst* n) override {
-        int lo = n->GetMin(), hi = n->GetMax();
-        NFAFrag result = {nullptr, nullptr};
-
-        auto append = [&](NFAFrag f) {
-            if (result.start == nullptr) result = f;
-            else {
-                result.end->accept = false;
-                result.end->epsilons.push_back(f.start);
-                result.end = f.end;
-            }
-        };
-
-        // lo required copies
-        for (int i = 0; i < lo; i++) {
-            n->GetElement()->Accept(this);
-            append(stack_.top()); stack_.pop();
-        }
-
-        if (hi == -1) {
-            // {lo,} → lo copies + star
-            n->GetElement()->Accept(this);
-            auto inner = stack_.top(); stack_.pop();
-            auto *s = NewState(), *e = NewState();
-            e->accept = true; inner.end->accept = false;
-            s->epsilons.push_back(inner.start);
-            s->epsilons.push_back(e);
-            inner.end->epsilons.push_back(inner.start);
-            inner.end->epsilons.push_back(e);
-            append({s, e});
-        } else {
-            // {lo,hi} → lo copies + (hi-lo) optional copies
-            for (int i = lo; i < hi; i++) {
-                n->GetElement()->Accept(this);
-                auto inner = stack_.top(); stack_.pop();
-                auto *s = NewState(), *e = NewState();
-                e->accept = true; inner.end->accept = false;
-                s->epsilons.push_back(inner.start);
-                s->epsilons.push_back(e);
-                inner.end->epsilons.push_back(e);
-                append({s, e});
-            }
-        }
-
-        if (result.start == nullptr) {
-            auto *s = NewState(); s->accept = true; result = {s, s};
-        }
-        stack_.push(result);
     }
 
     NFAFrag GetResult() { return stack_.top(); }
@@ -819,7 +689,7 @@ public:
     }
 
     // Find all non-overlapping matches (leftmost-longest).
-    std::vector<std::string_view> FindAll(std::string_view text) {
+    std::vector<std::string_view> Segment(std::string_view text) {
         std::vector<std::string_view> result;
         const char* data = text.data();
         size_t len = text.size(), pos = 0;
@@ -860,7 +730,7 @@ public:
     void PrintStats() { dfa_.PrintStats(); }
 
     bool Match(const std::string& text) { return dfa_.Match(text); }
-    std::vector<std::string_view> FindAll(std::string_view text) { return dfa_.FindAll(text); }
+    std::vector<std::string_view> Segment(std::string_view text) { return dfa_.Segment(text); }
 };
 
 } // namespace regex
@@ -894,8 +764,7 @@ int main(int argc, char** argv) {
         std::cerr << "Loaded " << lines.size() << " lines\n";
 
         const char* pat =
-            "'([sdmt]|ll|ve|re)"
-            "|[^\\r\\n\\p{A}\\p{H}\\p{N}]?\\p{A}+"
+            "[^\\r\\n\\p{A}\\p{H}\\p{N}]?\\p{A}+"
             "|\\p{H}+"
             "|\\p{N}+"
             "| ?[^\\s\\p{A}\\p{H}\\p{N}]+[\\r\\n]*"
@@ -913,7 +782,7 @@ int main(int argc, char** argv) {
         for (auto& l : lines) total_bytes += l.size();
 
         auto t2 = std::chrono::high_resolution_clock::now();
-        for (auto& l : lines) total_tokens += tok.FindAll(l).size();
+        for (auto& l : lines) total_tokens += tok.Segment(l).size();
         auto t3 = std::chrono::high_resolution_clock::now();
         double ms = std::chrono::duration<double,std::milli>(t3-t2).count();
 
@@ -940,13 +809,9 @@ int main(int argc, char** argv) {
     std::cout << "=== New Feature Tests ===\n\n";
     test_match("[abc]+", {{"abcba",true},{"xyz",false}});
     test_match("[^abc]+", {{"xyz",true},{"abc",false}});
-    test_match("[a-z]+", {{"hello",true},{"Hello",false}});
     test_match("\\p{N}+", {{"123",true},{"abc",false}});
     test_match("\\p{H}+", {{"\xe4\xbd\xa0\xe5\xa5\xbd",true},{"abc",false}});
     test_match("\\s+", {{" \t",true},{"abc",false}});
-    test_match("a{2,4}", {{"a",false},{"aa",true},{"aaa",true},{"aaaa",true},{"aaaaa",false}});
-    test_match("a{3}", {{"aa",false},{"aaa",true},{"aaaa",false}});
-    test_match("a{2,}", {{"a",false},{"aa",true},{"aaaaaa",true}});
 
     // --- GPT-4 tokenizer ---
     std::cout << "=== GPT-4 Tokenizer ===\n\n";
@@ -1004,7 +869,7 @@ int main(int argc, char** argv) {
     };
 
     for (auto& tc : cases) {
-        auto tokens = tokenizer.FindAll(tc.in);
+        auto tokens = tokenizer.Segment(tc.in);
         std::cout << "'" << tc.in << "'\n  -> [";
         for (size_t i = 0; i < tokens.size(); i++) {
             if (i) std::cout << ", ";
