@@ -27,8 +27,8 @@ cmake --build build
 
 完整原理讲解统一收录在《底层实现：文本处理》：
 
-- [正则表达式引擎：基础篇](https://ismantic.github.io/text/regex-engine-1.html)：从递归 Matcher 讲到 Parser、AST、Thompson NFA、子集构造和 DFA 匹配。
-- [正则表达式引擎：高级篇](https://ismantic.github.io/text/regex-engine-2.html)：围绕目标预分词 Pattern，讲解字符集合、谓词化 NFA、字符等价类、Lazy DFA 和 `Segment`。
+- [正则表达式引擎：基础篇](https://ismantic.github.io/text/regex-engine-1.html)：涵盖 Matcher 与 Compiler 两个机制的实现。
+- [正则表达式引擎：高级篇](https://ismantic.github.io/text/regex-engine-2.html)：涵盖支持 RegexTokenizer 的实现说明。
 
 ## License
 
